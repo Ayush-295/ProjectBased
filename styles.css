@@ -1,0 +1,45 @@
+/* Reset & Base */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #333; }
+header { background: #fff; padding: 1em; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+h1 { display: inline-block; font-size: 1.5em; margin-right: 1em; }
+
+/* Controls */
+.controls {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5em;
+  margin-top: 0.5em;
+}
+.controls label, .controls button, .controls select {
+  margin-right: 0.5em;
+  font-size: 0.9em;
+}
+.controls input[type=number] { width: 4em; }
+.controls input[type=range] { vertical-align: middle; }
+.controls button {
+  background: #4a90e2; color: #fff; border: none; padding: 0.4em 0.8em;
+  border-radius: 4px; cursor: pointer;
+}
+.controls button:disabled { background: #bbb; cursor: default; }
+.controls select { padding: 0.3em; border-radius: 4px; border: 1px solid #ccc; }
+
+/* Mode toggle */
+.input-mode label { margin-right: 1em; cursor: pointer; }
+#adjList { width: 200px; height: 80px; font-family: monospace; font-size: 0.85em; }
+
+/* Hide helpers */
+.hidden { display: none; }
+
+/* Main layout */
+main { display: flex; padding: 1em; gap: 1em; }
+.canvas-container {
+  background: #fff; border: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+#graphCanvas { display: block; }
+#pseudocode {
+  flex-shrink: 0; width: 280px; padding: 1em;
+  background: #2d2d2d; color: #f8f8f2; border-radius: 4px;
+  overflow-y: auto; line-height: 1.4; font-family: monospace;
+}
+.highlight { background: rgba(255, 255, 0, 0.3); }
+
+/* Node & Edge Styles */
