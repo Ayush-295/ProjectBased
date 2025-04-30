@@ -1,4 +1,3 @@
-// --- Elements ---
 const canvas      = document.getElementById('graphCanvas');
 const ctx         = canvas.getContext('2d');
 const modeRadios  = document.querySelectorAll('input[name="mode"]');
@@ -182,9 +181,14 @@ function pathIncludesEdge(path, e){
 function initState(algo){
   const start=+startNodeS.value, end=+endNodeS.value;
   state = { algo, pc:0, visited:{}, queue:[], stack:[], dist:{}, prev:{}, start, end, path:null };
-  if(algo==='bfs'){
-    state.queue.push(start); state.visited[start]=true;
-  } else if(algo==='dfs'){
+  if (algo === 'bfs') {
+    state.queue.push(start);
+    state.visited[start] = true;
+    // new:
+    state.curNeighbors = [];
+    state.curIndex     = 0;
+  }
+   else if(algo==='dfs'){
     state.stack.push([start,0]); state.visited[start]=true;
   } else {
     nodes.forEach(n=>{ state.dist[n.id]=Infinity; state.prev[n.id]=null; });
@@ -208,25 +212,47 @@ function step(){
 }
 
 function bfsStep(){
-  const {queue,visited} = state;
-  if(!queue.length) return stopRun();
-  state.pc=3;
-  const u=queue.shift();
-  state.pc=4;
-  for(let {to:v} of adj[u]){
-    state.pc=5;
-    if(!visited[v]){
-      visited[v]=true; queue.push(v);
-      drawGraph(Object.keys(visited).map(x=>+x));
-      return;
+  const { queue, visited } = state;
+
+  // If we’re not in the middle of scanning a node’s neighbors, grab the next u:
+  if (state.curNeighbors.length === 0) {
+    if (!queue.length) {
+      stopRun();
+      return true;
     }
+    state.pc = 3;
+    state.u = queue.shift();
+    // set up its neighbors & reset index
+    state.curNeighbors = adj[state.u];
+    state.curIndex     = 0;
   }
-  drawGraph(Object.keys(visited).map(x=>+x));
+
+  // Now process exactly one neighbor at a time:
+  if (state.curIndex < state.curNeighbors.length) {
+    state.pc = 4;
+    const { to: v } = state.curNeighbors[state.curIndex];
+    state.pc = 5;
+    if (!visited[v]) {
+      visited[v] = true;
+      queue.push(v);
+      drawGraph(Object.keys(visited).map(x => +x));
+    } else {
+      // even if already visited, we still want to step past it
+      drawGraph(Object.keys(visited).map(x => +x));
+    }
+    state.curIndex++;
+    return;
+  }
+
+  // once all neighbors done, clear and redraw
+  state.curNeighbors = [];
+  drawGraph(Object.keys(visited).map(x => +x));
 }
+
 
 function dfsStep(){
   const {stack,visited}=state;
-  if(!stack.length) return stopRun();
+  if (!stack.length) { stopRun(); return true; }
   const [u,idx]=stack.pop(), neigh=adj[u];
   if(idx<neigh.length){
     const v=neigh[idx].to;
@@ -244,13 +270,16 @@ function dfsStep(){
 
 function dijkstraStep(){
   const Q=state.queue;
-  if(!Q.length){
+  if (!Q.length) {
+
     // done → reconstruct path
     const path=[]; let u=state.end;
     while(u!=null){ path.unshift(u); u=state.prev[u]; }
     state.path=path;
     drawGraph([],path);
-    return stopRun();
+    
+stopRun();
+return true;
   }
   state.pc=3;
   // extract-min
@@ -296,18 +325,27 @@ startBtn.onclick = ()=>{
 
 stepBtn.onclick = ()=>step();
 
-playBtn.onclick = ()=>{
+playBtn.onclick = () => {
   playBtn.disabled = stepBtn.disabled = true;
   pauseBtn.disabled = false;
-  timer = setInterval(()=>{
-    step();
-    // if finished, stop
-    if(stepBtn.disabled && pauseBtn.disabled===false){
+
+  // invert slider: low → slow, high → fast
+  const min = +speedSlider.min;
+  const max = +speedSlider.max;
+  const val = +speedSlider.value;
+  const delay = (max + min) - val;
+
+  timer = setInterval(() => {
+    const done = step();
+    if (done) {
       clearInterval(timer);
-      playBtn.disabled=true;
+      pauseBtn.disabled = true;
+      playBtn.disabled = true;
+      stepBtn.disabled = true;
     }
-  }, +speedSlider.value);
+  }, delay);
 };
+
 
 pauseBtn.onclick = ()=>{
   clearInterval(timer);
@@ -315,5 +353,6 @@ pauseBtn.onclick = ()=>{
   playBtn.disabled=stepBtn.disabled=false;
 };
 
-// initial load
 genBtn.click();
+
+
