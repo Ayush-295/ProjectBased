@@ -20,7 +20,7 @@ const codeBox     = document.getElementById('pseudocode');
 let nodes = [], edges = [], adj = {};
 let state = null, timer = null;
 
-// Pseudocode
+// Pseudocode for all algorithms
 const PSEUDO = {
   bfs: [
     "BFS(start):",
@@ -53,12 +53,35 @@ const PSEUDO = {
     "        dist[v] ← alt",
     "        prev[v] ← u",
     "  reconstruct path from end ← prev[...]"
+  ],
+  prim: [
+    "Prim(start):",
+    "  for each v in V: key[v] ← ∞, parent[v] ← null, inMST[v] ← false",
+    "  key[start] ← 0",
+    "  Q ← all nodes",
+    "  while Q not empty:",
+    "    u ← extract-min(Q)",
+    "    inMST[u] ← true",
+    "    for each (v, w) in adj[u]:",
+    "      if not inMST[v] and w < key[v]:",
+    "        key[v] ← w",
+    "        parent[v] ← u",
+    "  construct MST from parent[]"
+  ],
+  kruskal: [
+    "Kruskal():",
+    "  A ← empty set",
+    "  for each (u, v, w) in E in non-decreasing order by w:",
+    "    if Find(u) ≠ Find(v):",
+    "      A ← A ∪ {(u, v)}",
+    "      Union(u, v)",
+    "  return A"
   ]
 };
 
-// --- Mode toggle ---
-modeRadios.forEach(r => r.addEventListener('change', _=>{
-  if (r.value==='custom' && r.checked) {
+// Mode toggle
+modeRadios.forEach(r => r.addEventListener('change', () => {
+  if (r.value === 'custom' && r.checked) {
     randomCtrls.classList.add('hidden');
     customCtrls.classList.remove('hidden');
   } else {
@@ -67,292 +90,269 @@ modeRadios.forEach(r => r.addEventListener('change', _=>{
   }
 }));
 
-// --- Generate Graph ---
-genBtn.onclick = ()=>{
+// Generate graph
+genBtn.onclick = () => {
   clearInterval(timer);
   stepBtn.disabled = playBtn.disabled = pauseBtn.disabled = true;
   const mode = document.querySelector('input[name="mode"]:checked').value;
-  if (mode==='random') buildRandom(+Ninput.value);
+  if (mode === 'random') buildRandom(+Ninput.value);
   else buildCustom(edgeTextarea.value);
   populateNodeSelectors();
   drawGraph();
 };
 
-// --- Random builder ---
-function buildRandom(N){
-  nodes = []; edges = []; adj = {};
-  for(let i=0;i<N;i++){ nodes.push({id:i}); adj[i]=[]; }
-  // circle layout
-  nodes.forEach((n,i)=>{
-    const ang=2*Math.PI/N*i;
-    n.x=400+200*Math.cos(ang); n.y=300+200*Math.sin(ang);
+// Build random graph
+function buildRandom(N) {
+  nodes = [];
+  edges = [];
+  adj = {};
+  for (let i = 0; i < N; i++) {
+    nodes.push({ id: i });
+    adj[i] = [];
+  }
+  nodes.forEach((n, i) => {
+    const ang = 2 * Math.PI / N * i;
+    n.x = 400 + 200 * Math.cos(ang);
+    n.y = 300 + 200 * Math.sin(ang);
   });
-  // spanning tree + extras
-  const perm=nodes.map(n=>n.id).sort(()=>Math.random()-.5);
-  for(let i=1;i<perm.length;i++) addEdge(perm[i-1],perm[i]);
-  for(let i=0;i<N;i++){
-    const j=Math.floor(Math.random()*N);
-    if(i!==j && !adj[i].some(e=>e.to===j)) addEdge(i,j);
+  const perm = nodes.map(n => n.id).sort(() => Math.random() - 0.5);
+  for (let i = 1; i < perm.length; i++) addEdge(perm[i - 1], perm[i]);
+  for (let i = 0; i < N; i++) {
+    const j = Math.floor(Math.random() * N);
+    if (i !== j && !adj[i].some(e => e.to === j)) addEdge(i, j);
   }
 }
 
-// --- Custom builder (edge list) ---
-function buildCustom(text){
-  nodes=[]; edges=[]; adj={};
-  text.trim().split('\n').forEach(line=>{
-    const parts=line.trim().split(/\s+/);
-    if(parts.length<2) return;
-    const u=+parts[0], v=+parts[1], w=+(parts[2]||1);
-    [u,v].forEach(x=>{ if(adj[x]===undefined){ adj[x]=[]; nodes.push({id:x}); }});
-    if(!adj[u].some(e=>e.to===v)) addEdge(u,v,w);
+// Build custom graph
+function buildCustom(text) {
+  nodes = [];
+  edges = [];
+  adj = {};
+  text.trim().split('\n').forEach(line => {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 2) return;
+    const u = +parts[0], v = +parts[1], w = +(parts[2] || 1);
+    [u, v].forEach(x => {
+      if (!adj[x]) {
+        adj[x] = [];
+        nodes.push({ id: x });
+      }
+    });
+    if (!adj[u].some(e => e.to === v)) addEdge(u, v, w);
   });
-  // circle layout
-  nodes.sort((a,b)=>a.id-b.id);
-  const N=nodes.length;
-  nodes.forEach((n,i)=>{
-    const ang=2*Math.PI/N*i;
-    n.x=400+200*Math.cos(ang); n.y=300+200*Math.sin(ang);
+  nodes.sort((a, b) => a.id - b.id);
+  const N = nodes.length;
+  nodes.forEach((n, i) => {
+    const ang = 2 * Math.PI / N * i;
+    n.x = 400 + 200 * Math.cos(ang);
+    n.y = 300 + 200 * Math.sin(ang);
   });
 }
 
-// --- Add bidir edge ---
-function addEdge(u,v,w=Math.floor(Math.random()*9)+1){
-  edges.push({u,v,w});
-  adj[u].push({to:v,w});
-  adj[v].push({to:u,w});
+// Add edge
+function addEdge(u, v, w = Math.floor(Math.random() * 9) + 1) {
+  edges.push({ u, v, w });
+  adj[u].push({ to: v, w });
+  adj[v].push({ to: u, w });
 }
 
-// --- Populate start/end dropdowns ---
-function populateNodeSelectors(){
+// Populate selectors
+function populateNodeSelectors() {
   startNodeS.innerHTML = '';
   endNodeS.innerHTML = '';
-  nodes.forEach(n=>{
-    [startNodeS,endNodeS].forEach(sel=>{
-      const o=document.createElement('option');
-      o.value=n.id; o.textContent=n.id;
+  nodes.forEach(n => {
+    [startNodeS, endNodeS].forEach(sel => {
+      const o = document.createElement('option');
+      o.value = n.id;
+      o.textContent = n.id;
       sel.appendChild(o);
     });
   });
-  // show endNode only for Dijkstra
-  if(algoSelect.value==='dijkstra') endLabel.classList.remove('hidden');
-  else endLabel.classList.add('hidden');
+  endLabel.classList.toggle('hidden', algoSelect.value !== 'dijkstra');
 }
+algoSelect.onchange = populateNodeSelectors;
 
-// when algo changes, toggle endNode visibility
-algoSelect.onchange = _=>{
-  if(algoSelect.value==='dijkstra') endLabel.classList.remove('hidden');
-  else endLabel.classList.add('hidden');
-};
-
-// --- Draw ---
-function drawGraph(highlighted=[], path=[]){
-  ctx.clearRect(0,0,800,600);
-  // edges
-  edges.forEach(e=>{
-    const a=nodes.find(n=>n.id===e.u),
-          b=nodes.find(n=>n.id===e.v);
-    ctx.strokeStyle = pathIncludesEdge(path,e)? '#e67e22':'#bbb';
-    ctx.lineWidth = pathIncludesEdge(path,e)?4:2;
-    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
-    ctx.fillStyle='#555'; ctx.fillText(e.w, mx+6,my-6);
+// Draw graph
+function drawGraph(highlighted = [], path = [], mstEdges = []) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  edges.forEach(e => {
+    const a = nodes.find(n => n.id === e.u);
+    const b = nodes.find(n => n.id === e.v);
+    const inPath = pathIncludesEdge(path, e);
+    const inMST = mstEdges.some(m => (m.u === e.u && m.v === e.v) || (m.u === e.v && m.v === e.u));
+    ctx.strokeStyle = inPath || inMST ? '#e67e22' : '#bbb';
+    ctx.lineWidth = inPath || inMST ? 4 : 2;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.fillText(e.w, (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 6);
   });
-  // nodes
-  nodes.forEach(n=>{
-    const hl = highlighted.includes(n.id),
-          inPath = path.includes(n.id);
-    ctx.fillStyle = inPath ? '#e67e22' : (hl? '#e74c3c':'#3498db');
-    ctx.strokeStyle='#2980b9'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.arc(n.x,n.y,22,0,2*Math.PI); ctx.fill(); ctx.stroke();
-    ctx.fillStyle='#fff'; ctx.font='16px sans-serif';
-    ctx.fillText(n.id, n.x-6,n.y+6);
+  nodes.forEach(n => {
+    const hl = highlighted.includes(n.id);
+    const inPath = path.includes(n.id);
+    const inTree = mstEdges.some(m => m.u === n.id || m.v === n.id);
+    ctx.fillStyle = inPath || inTree ? '#e67e22' : hl ? '#e74c3c' : '#3498db';
+    ctx.strokeStyle = '#2980b9';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 22, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(n.id, n.x - 6, n.y + 6);
   });
 }
-
-function pathIncludesEdge(path, e){
-  for(let i=0;i<path.length-1;i++){
-    if((e.u===path[i]&&e.v===path[i+1])||(e.v===path[i]&&e.u===path[i+1]))
-      return true;
+function pathIncludesEdge(path, e) {
+  for (let i = 0; i < path.length - 1; i++) {
+    if ((e.u === path[i] && e.v === path[i + 1]) || (e.v === path[i] && e.u === path[i + 1])) return true;
   }
   return false;
 }
 
-// --- Init state & stepping ---
-function initState(algo){
-  const start=+startNodeS.value, end=+endNodeS.value;
-  state = { algo, pc:0, visited:{}, queue:[], stack:[], dist:{}, prev:{}, start, end, path:null };
+// Initialize state
+function initState(algo) {
+  const start = +startNodeS.value;
+  const end = +endNodeS.value;
+  state = { algo, pc: 0, start, end };
   if (algo === 'bfs') {
-    state.queue.push(start);
+    state.visited = {};
+    state.queue = [start];
     state.visited[start] = true;
-    // new:
     state.curNeighbors = [];
-    state.curIndex     = 0;
-  }
-   else if(algo==='dfs'){
-    state.stack.push([start,0]); state.visited[start]=true;
-  } else {
-    nodes.forEach(n=>{ state.dist[n.id]=Infinity; state.prev[n.id]=null; });
-    state.dist[start]=0;
-    state.queue = nodes.map(n=>n.id);
+    state.curIndex = 0;
+  } else if (algo === 'dfs') {
+    state.visited = {};
+    state.stack = [[start, 0]];
+    state.visited[start] = true;
+  } else if (algo === 'dijkstra') {
+    state.dist = {}; state.prev = {};
+    nodes.forEach(n => { state.dist[n.id] = Infinity; state.prev[n.id] = null; });
+    state.dist[start] = 0;
+    state.queue = nodes.map(n => n.id);
+  } else if (algo === 'prim') {
+    state.key = {}; state.parent = {}; state.inMST = {};
+    nodes.forEach(n => { state.key[n.id] = Infinity; state.parent[n.id] = null; state.inMST[n.id] = false; });
+    state.key[start] = 0;
+    state.queue = nodes.map(n => n.id);
+  } else if (algo === 'kruskal') {
+    state.dsuParent = {}; state.dsuRank = {};
+    nodes.forEach(n => { state.dsuParent[n.id] = n.id; state.dsuRank[n.id] = 0; });
+    state.edgeListSorted = edges.slice().sort((a,b)=>a.w-b.w);
+    state.mstEdges = []; state.edgeIndex = 0;
   }
   renderCode();
   drawGraph([start]);
 }
 
-function step(){
-  // clear highlights
-  codeBox.querySelectorAll('div').forEach(d=>d.classList.remove('highlight'));
+// Step execution
+function step() {
+  codeBox.querySelectorAll('div').forEach(d => d.classList.remove('highlight'));
   codeBox.children[state.pc]?.classList.add('highlight');
-
-  if(state.algo==='bfs') bfsStep();
-  else if(state.algo==='dfs') dfsStep();
-  else dijkstraStep();
-
+  let done = false;
+  if (state.algo === 'bfs') done = bfsStep();
+  else if (state.algo === 'dfs') done = dfsStep();
+  else if (state.algo === 'dijkstra') done = dijkstraStep();
+  else if (state.algo === 'prim') done = primStep();
+  else if (state.algo === 'kruskal') done = kruskalStep();
   renderCode();
+  return done;
 }
 
-function bfsStep(){
+// BFS step
+function bfsStep() {
   const { queue, visited } = state;
-
-  // If we’re not in the middle of scanning a node’s neighbors, grab the next u:
   if (state.curNeighbors.length === 0) {
-    if (!queue.length) {
-      stopRun();
-      return true;
-    }
-    state.pc = 3;
-    state.u = queue.shift();
-    // set up its neighbors & reset index
-    state.curNeighbors = adj[state.u];
-    state.curIndex     = 0;
+    if (!queue.length) { stopRun(); return true; }
+    state.pc = 3; state.u = queue.shift(); state.curNeighbors = adj[state.u]; state.curIndex = 0;
   }
-
-  // Now process exactly one neighbor at a time:
   if (state.curIndex < state.curNeighbors.length) {
-    state.pc = 4;
-    const { to: v } = state.curNeighbors[state.curIndex];
     state.pc = 5;
-    if (!visited[v]) {
-      visited[v] = true;
-      queue.push(v);
-      drawGraph(Object.keys(visited).map(x => +x));
-    } else {
-      // even if already visited, we still want to step past it
-      drawGraph(Object.keys(visited).map(x => +x));
-    }
+    const v = state.curNeighbors[state.curIndex].to;
+    state.pc = 6;
+    if (!visited[v]) { visited[v] = true; queue.push(v); drawGraph(Object.keys(visited).map(x=>+x)); }
+    else drawGraph(Object.keys(visited).map(x=>+x));
     state.curIndex++;
     return;
   }
-
-  // once all neighbors done, clear and redraw
   state.curNeighbors = [];
-  drawGraph(Object.keys(visited).map(x => +x));
+  drawGraph(Object.keys(visited).map(x=>+x));
 }
 
-
-function dfsStep(){
-  const {stack,visited}=state;
+// DFS step
+function dfsStep() {
+  const { stack, visited } = state;
   if (!stack.length) { stopRun(); return true; }
-  const [u,idx]=stack.pop(), neigh=adj[u];
-  if(idx<neigh.length){
-    const v=neigh[idx].to;
-    stack.push([u,idx+1]);
-    state.pc=2;
-    if(!visited[v]){
-      state.pc=3;
-      visited[v]=true; stack.push([v,0]);
-      drawGraph(Object.keys(visited).map(x=>+x));
-      return;
-    }
+  const [u, idx] = stack.pop(); const neigh = adj[u];
+  if (idx < neigh.length) {
+    const v = neigh[idx].to; stack.push([u, idx+1]); state.pc = 2;
+    if (!visited[v]) { state.pc = 3; visited[v]=true; stack.push([v,0]); drawGraph(Object.keys(visited).map(x=>+x)); return; }
   }
   drawGraph(Object.keys(visited).map(x=>+x));
 }
 
-function dijkstraStep(){
-  const Q=state.queue;
+// Dijkstra step
+function dijkstraStep() {
+  const Q = state.queue;
   if (!Q.length) {
-
-    // done → reconstruct path
-    const path=[]; let u=state.end;
+    const path=[]; let u = state.end;
     while(u!=null){ path.unshift(u); u=state.prev[u]; }
-    state.path=path;
-    drawGraph([],path);
-    
-stopRun();
-return true;
+    drawGraph([], path); stopRun(); return true;
   }
-  state.pc=3;
-  // extract-min
-  let u=Q.reduce((a,b)=> state.dist[a]<state.dist[b]?a:b);
-  Q.splice(Q.indexOf(u),1);
-  state.pc=4;
+  state.pc=4; let u = Q.reduce((a,b)=>state.dist[a]<state.dist[b]?a:b); Q.splice(Q.indexOf(u),1);
+  state.pc=5;
   for(let {to:v,w} of adj[u]){
-    state.pc=5;
-    const alt=state.dist[u]+w;
-    if(alt<state.dist[v]){
-      state.pc=6;
-      state.dist[v]=alt; state.prev[v]=u;
-      drawGraph([u,v]);
-      return;
-    }
+    state.pc=6; const alt = state.dist[u] + w;
+    if(alt<state.dist[v]){ state.dist[v]=alt; state.prev[v]=u; drawGraph([u,v]); return; }
   }
   drawGraph([u]);
 }
 
-function stopRun(){
-  clearInterval(timer);
-  stepBtn.disabled=playBtn.disabled=true;
-  pauseBtn.disabled=true;
+// Prim step
+function primStep() {
+  const { queue, key, inMST, parent } = state;
+  if (!queue.length) {
+    drawGraph([], [], nodes.map(n=>({u:parent[n.id],v:n.id})).filter(e=>e.u!=null)); stopRun(); return true;
+  }
+  state.pc=5; let u = queue.reduce((a,b)=>key[a]<key[b]?a:b); queue.splice(queue.indexOf(u),1);
+  state.pc=6; inMST[u]=true;
+  for(let {to:v,w} of adj[u]){
+    state.pc=7; if(!inMST[v]&&w<key[v]){ state.pc=8; key[v]=w; parent[v]=u; drawGraph([],[], nodes.map(n=>({u:parent[n.id],v:n.id})).filter(e=>e.u!=null)); return; }
+  }
+  drawGraph([],[], nodes.map(n=>({u:parent[n.id],v:n.id})).filter(e=>e.u!=null));
 }
 
-// --- Pseudocode render ---
-function renderCode(){
-  codeBox.innerHTML='';
-  PSEUDO[state.algo].forEach((line,i)=>{
-    const d=document.createElement('div');
-    d.textContent=line;
-    if(i===state.pc) d.classList.add('highlight');
-    codeBox.appendChild(d);
-  });
+// DSU for Kruskal
+function findDSU(u){ return state.dsuParent[u]===u?u:(state.dsuParent[u]=findDSU(state.dsuParent[u])); }
+function unionDSU(u,v){
+  const ru=findDSU(u), rv=findDSU(v);
+  if(ru===rv)return; if(state.dsuRank[ru]<state.dsuRank[rv]) state.dsuParent[ru]=rv;
+  else if(state.dsuRank[ru]>state.dsuRank[rv]) state.dsuParent[rv]=ru;
+  else { state.dsuParent[rv]=ru; state.dsuRank[ru]++; }
 }
 
-// --- Controls wiring ---
-startBtn.onclick = ()=>{
-  initState(algoSelect.value);
-  stepBtn.disabled = playBtn.disabled = false;
-  pauseBtn.disabled = true;
-};
+// Kruskal step
+function kruskalStep(){
+  const list=state.edgeListSorted;
+  if(state.edgeIndex>=list.length){ drawGraph([],[], state.mstEdges); stopRun(); return true; }
+  state.pc=2; const e=list[state.edgeIndex++]; const ru=findDSU(e.u), rv=findDSU(e.v);
+  state.pc=3;
+  if(ru!==rv){ unionDSU(ru,rv); state.mstEdges.push(e); drawGraph([],[],state.mstEdges); return; }
+  drawGraph([],[],state.mstEdges);
+}
 
-stepBtn.onclick = ()=>step();
+// Render pseudocode
+function renderCode(){ codeBox.innerHTML=''; PSEUDO[state.algo].forEach((line,i)=>{ const d=document.createElement('div'); d.textContent=line; if(i===state.pc) d.classList.add('highlight'); codeBox.appendChild(d); }); }
 
-playBtn.onclick = () => {
-  playBtn.disabled = stepBtn.disabled = true;
-  pauseBtn.disabled = false;
+// Stop run
+function stopRun(){ clearInterval(timer); stepBtn.disabled=playBtn.disabled=true; pauseBtn.disabled=true; }
 
-  // invert slider: low → slow, high → fast
-  const min = +speedSlider.min;
-  const max = +speedSlider.max;
-  const val = +speedSlider.value;
-  const delay = (max + min) - val;
-
-  timer = setInterval(() => {
-    const done = step();
-    if (done) {
-      clearInterval(timer);
-      pauseBtn.disabled = true;
-      playBtn.disabled = true;
-      stepBtn.disabled = true;
-    }
-  }, delay);
-};
-
-
-pauseBtn.onclick = ()=>{
-  clearInterval(timer);
-  pauseBtn.disabled=true;
-  playBtn.disabled=stepBtn.disabled=false;
-};
+// Controls
+startBtn.onclick = ()=>{ initState(algoSelect.value); stepBtn.disabled=playBtn.disabled=false; pauseBtn.disabled=true; };
+stepBtn.onclick  = ()=>step();
+playBtn.onclick  = ()=>{ playBtn.disabled=stepBtn.disabled=true; pauseBtn.disabled=false; const delay=(+speedSlider.max+ +speedSlider.min)-+speedSlider.value; timer=setInterval(()=>{ if(step()) stopRun(); }, delay); };
+pauseBtn.onclick = ()=>{ clearInterval(timer); pauseBtn.disabled=true; playBtn.disabled=stepBtn.disabled=false; };
 
 genBtn.click();
-
-
